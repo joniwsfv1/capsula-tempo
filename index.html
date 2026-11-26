@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cápsula do Tempo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --tinta: #3a2210;
+    --marrom: #5a2f0e;
+    --papel: #f4dfa8;
+    --papel-escuro: #e6c27a;
+    --ambar: #e08a1e;
+    --laranja: #c4571a;
+    --mostarda: #f0b429;
+    --selo: #a8330f;
+    --display: "Alfa Slab One", Rockwell, "Courier New", serif;
+    --maquina: "Special Elite", "Courier New", Courier, monospace;
+    --grao: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .3  0 0 0 0 .15  0 0 0 0 .05  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    color: var(--tinta);
+    font-family: var(--maquina);
+    font-size: 17px;
+    line-height: 1.55;
+    background:
+      radial-gradient(ellipse at 50% 40%, transparent 35%, rgba(70, 28, 4, .5) 100%),
+      linear-gradient(180deg, #eaa63c 0%, #d9781f 55%, #b9511a 100%);
+    background-attachment: fixed;
+  }
+  /* grão de papel velho sobre a página inteira */
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: var(--grao);
+    opacity: .22;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  main {
+    width: min(680px, 100%);
+    margin: 0 auto;
+    padding: 40px 18px 56px;
+  }
+
+  header { text-align: center; margin-bottom: 28px; }
+  h1 {
+    margin: 0 0 10px;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(2.3rem, 9vw, 4rem);
+    line-height: 1;
+    color: #fff1c9;
+    text-shadow: 3px 3px 0 #8a3c0e, 6px 6px 0 rgba(90, 47, 14, .35);
+    letter-spacing: .01em;
+  }
+  header p {
+    margin: 0 auto;
+    max-width: 44ch;
+    color: #3b1c06;
+    font-size: 1.05rem;
+  }
+
+  .palco { position: relative; isolation: isolate; }
+
+  /* ---------- papéis (formulário, carta, avisos) ---------- */
+  .papel {
+    position: relative;
+    z-index: 2;
+    background: var(--papel);
+    background-image: var(--grao);
+    background-blend-mode: multiply;
+    border: 3px double var(--marrom);
+    border-radius: 3px;
+    padding: 28px 28px 30px;
+    box-shadow: 0 2px 0 rgba(255,255,255,.35) inset, 6px 8px 0 rgba(70, 28, 4, .35);
+  }
+  .papel h2 {
+    margin: 0 0 6px;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 1.6rem;
+    line-height: 1.15;
+    color: var(--marrom);
+  }
+  .papel p { margin: 0 0 16px; }
+  .ajuda { font-size: .92rem; color: #6b3a12; }
+
+  label { display: block; margin: 16px 0 2px; font-size: .95rem; color: var(--marrom); }
+  input[type="text"], input[type="email"] {
+    width: 100%;
+    padding: 8px 2px;
+    font: inherit;
+    font-size: 1.1rem;
+    color: var(--tinta);
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--marrom);
+    border-radius: 0;
+  }
+  input:focus-visible, textarea:focus-visible {
+    outline: 3px solid var(--laranja);
+    outline-offset: 3px;
+  }
+
+  .botao {
+    margin-top: 22px;
+    padding: 12px 22px;
+    font-family: var(--display);
+    font-size: 1.05rem;
+    color: var(--tinta);
+    background: var(--mostarda);
+    border: 2px solid var(--marrom);
+    border-radius: 4px;
+    box-shadow: 4px 4px 0 var(--marrom);
+    cursor: pointer;
+    transition: transform .08s, box-shadow .08s;
+  }
+  .botao:hover { background: #f7c34a; }
+  .botao:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--marrom); }
+  .botao:focus-visible { outline: 3px solid var(--tinta); outline-offset: 3px; }
+  .botao:disabled { opacity: .6; cursor: wait; }
+
+  .erro { min-height: 1.5em; margin: 12px 0 0; color: var(--selo); font-size: .95rem; }
+
+  /* ---------- carta ---------- */
+  #carta { transform-origin: 50% 50%; }
+  #carta .conteudo { transition: opacity .25s; }
+  #carta.dobrando .conteudo { opacity: 0; }
+  #carta::before {            /* vincos da dobra */
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: 3px;
+    background:
+      linear-gradient(90deg, transparent 32.5%, rgba(90,47,14,.35) 33.3%, transparent 34.2%,
+                      transparent 65.8%, rgba(90,47,14,.35) 66.7%, transparent 67.5%),
+      linear-gradient(180deg, transparent 49%, rgba(90,47,14,.4) 50%, transparent 51%);
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+  }
+  #carta.dobrando::before { opacity: 1; }
+
+  .remetente {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px;
+    margin-bottom: 14px; padding-bottom: 10px;
+    border-bottom: 1px dashed var(--marrom);
+    font-size: .95rem;
+  }
+  textarea {
+    display: block;
+    width: 100%;
+    height: 256px;               /* 8 linhas de 32px */
+    padding: 0 8px 0 14px;
+    font: inherit;
+    font-size: 1.1rem;
+    line-height: 32px;
+    color: var(--tinta);
+    background: transparent;
+    background-image: repeating-linear-gradient(transparent 0 31px, rgba(139, 80, 30, .35) 31px 32px);
+    background-attachment: local;
+    border: 0;
+    border-left: 2px solid rgba(196, 87, 26, .6);
+    border-radius: 0;
+    resize: none;
+  }
+  .rodape-carta {
+    display: flex; justify-content: space-between; gap: 12px;
+    margin-top: 6px; font-size: .88rem; color: #6b3a12;
+  }
+
+  .leitura {
+    white-space: pre-wrap;
+    min-height: 120px;
+    font-size: 1.1rem;
+    line-height: 32px;
+    background-image: repeating-linear-gradient(transparent 0 31px, rgba(139, 80, 30, .35) 31px 32px);
+    border-left: 2px solid rgba(196, 87, 26, .6);
+    padding: 0 8px 0 14px;
+    margin: 0 0 14px;
+    overflow-wrap: anywhere;
+  }
+
+  /* ---------- cápsula ---------- */
+  .fenda {
+    position: relative;                 /* sem z-index: não cria contexto de empilhamento */
+    width: 220px;
+    aspect-ratio: 220 / 300;
+    margin: 34px auto 0;
+  }
+  .fenda::before {                      /* raios do sol, anos 60 */
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 1500px; height: 1500px;
+    transform: translate(-50%, -50%);
+    background: repeating-conic-gradient(from 0deg, rgba(255, 224, 130, .42) 0 6deg, transparent 6deg 12deg);
+    -webkit-mask-image: radial-gradient(circle, #000 8%, transparent 52%);
+            mask-image: radial-gradient(circle, #000 8%, transparent 52%);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .fenda svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .fenda .fundo { z-index: 1; }
+  .fenda .frente { z-index: 3; filter: drop-shadow(6px 10px 0 rgba(70, 28, 4, .35)); }
+
+  #tampa {
+    transform-box: fill-box;
+    transform-origin: 0% 60%;
+    transition: transform .7s cubic-bezier(.5, 0, .2, 1);
+  }
+  .fenda.aberta #tampa { transform: translate(78px, -58px) rotate(32deg); }
+
+  .selo {
+    position: absolute;
+    z-index: 5;
+    left: 50%; top: 37%;
+    padding: 2px 12px;
+    font-family: var(--display);
+    font-size: .95rem;
+    color: var(--selo);
+    border: 3px solid var(--selo);
+    border-radius: 4px;
+    transform: translate(-50%, -50%) rotate(-10deg) scale(2.2);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .fenda.lacrada .selo { animation: carimbo .45s cubic-bezier(.3, 1.4, .5, 1) forwards; }
+  @keyframes carimbo {
+    to { opacity: .92; transform: translate(-50%, -50%) rotate(-10deg) scale(1); }
+  }
+
+  .aviso-demo {
+    margin: 44px auto 0;
+    max-width: 52ch;
+    text-align: center;
+    font-size: .85rem;
+    color: #3b1c06;
+    opacity: .85;
+  }
+
+  @media (max-width: 480px) {
+    body { font-size: 16px; }
+    .papel { padding: 22px 18px 24px; }
+    .fenda { width: 190px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #tampa, #carta .conteudo, #carta::before { transition: none; }
+    .fenda.lacrada .selo { animation: none; opacity: .92; transform: translate(-50%, -50%) rotate(-10deg); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Cápsula do Tempo</h1>
+    <p id="chamada">Escreva uma carta hoje. Ela volta para você quando a cápsula for aberta.</p>
+  </header>
+
+  <div class="palco" id="palco">
+
+    <!-- 1. Identificação -->
+    <section class="papel" id="passoIdentificar" aria-labelledby="tIdent">
+      <h2 id="tIdent">Quem vai escrever?</h2>
+      <p class="ajuda">Cada email pode guardar uma única carta. É para esse email que avisaremos na abertura.</p>
+      <form id="formIdentificar" novalidate>
+        <label for="nome">Nome</label>
+        <input type="text" id="nome" name="nome" autocomplete="name" maxlength="80" required>
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email" maxlength="120" required>
+        <p class="erro" id="erroIdent" role="alert"></p>
+        <button class="botao" type="submit" id="btnIdentificar">Escrever minha carta</button>
+      </form>
+    </section>
+
+    <!-- 2. Carta -->
+    <section class="papel" id="carta" aria-labelledby="tCarta" hidden>
+      <div class="conteudo">
+        <div class="remetente">
+          <span id="deQuem"></span>
+          <span id="dataCarta"></span>
+        </div>
+        <h2 id="tCarta" style="position:absolute;left:-9999px">Sua carta</h2>
+        <label for="mensagem" style="margin-top:0">Escreva para quem você será no dia da abertura</label>
+        <textarea id="mensagem" maxlength="1500" placeholder="Querido eu do futuro,&#10;&#10;Hoje eu estou..."></textarea>
+        <div class="rodape-carta">
+          <span>Depois de lacrada, a carta não pode ser editada.</span>
+          <span id="contador">0 / 1500</span>
+        </div>
+        <p class="erro" id="erroCarta" role="alert"></p>
+        <button class="botao" type="button" id="btnGuardar" style="margin-top:6px">Guardar na cápsula</button>
+      </div>
+    </section>
+
+    <!-- 3. Carta guardada -->
+    <section class="papel" id="passoFeito" aria-labelledby="tFeito" hidden>
+      <h2 id="tFeito">Carta guardada</h2>
+      <p id="textoFeito"></p>
+      <p class="ajuda" id="contagem"></p>
+    </section>
+
+    <!-- 4. Leitura da carta (depois da abertura) -->
+    <section class="papel" id="passoLer" aria-labelledby="tLer" hidden>
+      <h2 id="tLer">Sua carta chegou</h2>
+      <div class="remetente">
+        <span id="leDe"></span>
+        <span id="leData"></span>
+      </div>
+      <div class="leitura" id="leTexto"></div>
+      <p class="ajuda" id="leTempo"></p>
+    </section>
+
+    <!-- Cápsula -->
+    <div class="fenda" id="fenda">
+      <svg class="fundo" viewBox="0 0 220 300" aria-hidden="true">
+        <ellipse cx="110" cy="60" rx="80" ry="22" fill="#2a1407" stroke="#6e2c0a" stroke-width="4"/>
+      </svg>
+
+      <svg class="frente" viewBox="0 0 220 300" role="img" aria-label="Cápsula do tempo de metal">
+        <defs>
+          <linearGradient id="metal" x1="0" x2="1">
+            <stop offset="0" stop-color="#8f3f12"/>
+            <stop offset=".22" stop-color="#e08a1e"/>
+            <stop offset=".45" stop-color="#f6c05a"/>
+            <stop offset=".75" stop-color="#c4571a"/>
+            <stop offset="1" stop-color="#6e2c0a"/>
+          </linearGradient>
+          <linearGradient id="metalTampa" x1="0" x2="1">
+            <stop offset="0" stop-color="#b8561a"/>
+            <stop offset=".4" stop-color="#f6c05a"/>
+            <stop offset="1" stop-color="#9c3f0f"/>
+          </linearGradient>
+        </defs>
+
+        <!-- corpo -->
+        <path d="M30 60 A80 22 0 0 0 190 60 V245 Q190 285 110 285 Q30 285 30 245 Z"
+              fill="url(#metal)" stroke="#5a2f0e" stroke-width="4" stroke-linejoin="round"/>
+        <!-- faixas -->
+        <rect x="30" y="112" width="160" height="12" fill="#7a3510" opacity=".55"/>
+        <rect x="30" y="232" width="160" height="12" fill="#7a3510" opacity=".55"/>
+        <!-- placa -->
+        <rect x="52" y="138" width="116" height="80" rx="6" fill="#f1d391" stroke="#5a2f0e" stroke-width="3"/>
+        <circle cx="60" cy="146" r="2.6" fill="#5a2f0e"/><circle cx="160" cy="146" r="2.6" fill="#5a2f0e"/>
+        <circle cx="60" cy="210" r="2.6" fill="#5a2f0e"/><circle cx="160" cy="210" r="2.6" fill="#5a2f0e"/>
+        <text x="110" y="166" text-anchor="middle" font-family="Special Elite, Courier New, monospace" font-size="11" fill="#3a2210">Não abrir antes de</text>
+        <text id="placaAno" x="110" y="198" text-anchor="middle" font-family="Alfa Slab One, serif" font-size="30" fill="#a8330f">----</text>
+
+        <!-- tampa -->
+        <g id="tampa">
+          <ellipse cx="110" cy="58" rx="86" ry="25" fill="url(#metalTampa)" stroke="#5a2f0e" stroke-width="4"/>
+          <ellipse cx="110" cy="58" rx="62" ry="15" fill="none" stroke="#7a3510" stroke-width="2" opacity=".6"/>
+          <rect x="98" y="44" width="24" height="9" rx="4.5" fill="#7a3510" stroke="#5a2f0e" stroke-width="2"/>
+        </g>
+      </svg>
+
+      <div class="selo" aria-hidden="true">LACRADA</div>
+    </div>
+  </div>
+
+  <p class="aviso-demo" id="avisoDemo" hidden>
+    Modo demonstração: as cartas ficam salvas só neste navegador e nenhum email é enviado.
+    Para valer para todo mundo, preencha <code>API_URL</code> no início do script (veja os comentários).
+  </p>
+</main>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO
+   ---------------------------------------------------------------------
+   ABRE_EM  : data e hora em que a cápsula será aberta.
+   API_URL  : endereço do seu servidor. Deixe vazio para o modo demonstração
+              (usa o localStorage do navegador, só serve para testar).
+
+   O que o servidor precisa fazer (um site só com HTML NÃO consegue isso sozinho):
+     POST {API_URL}/consultar   corpo {email}
+          -> {existe: bool, aberta: bool, abre_em: "ISO"}
+     POST {API_URL}/mensagens   corpo {nome, email, mensagem}
+          -> 201 se salvou, 409 se esse email já tem carta
+          (a coluna email deve ser UNIQUE no banco: é isso que garante uma carta por email)
+     GET  {API_URL}/carta?token=XYZ
+          -> {nome, mensagem, criada_em}  (só depois da abertura)
+     Na data de abertura, uma tarefa agendada (cron) envia a cada pessoa um email
+     com o link  https://seu-site/?token=XYZ  (um token único e difícil de adivinhar).
+   ===================================================================== */
+const CONFIG = {
+  ABRE_EM: "2036-11-26T00:00:00",
+  API_URL: "",
+  MAX_CARACTERES: 1500
+};
+
+const DEMO = !CONFIG.API_URL;
+const params = new URLSearchParams(location.search);
+const $ = (s) => document.querySelector(s);
+const abreEm = new Date(CONFIG.ABRE_EM);
+
+const fmtData = (d) => new Date(d).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+const normalizar = (e) => e.trim().toLowerCase();
+const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+const jaAbriu = () => (DEMO && params.has("abrir")) || new Date() >= abreEm;   // em modo demo, ?abrir simula a abertura
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* ---------- armazenamento (demo) e API ---------- */
+const CHAVE = "capsula-do-tempo:v1";
+const lerTudo = () => { try { return JSON.parse(localStorage.getItem(CHAVE)) || {}; } catch { return {}; } };
+const gravarTudo = (o) => { try { localStorage.setItem(CHAVE, JSON.stringify(o)); } catch {} };
+
+const api = {
+  async consultar(email) {
+    if (DEMO) {
+      const carta = lerTudo()[email];
+      if (!carta) return { existe: false };
+      return { existe: true, aberta: jaAbriu(), abre_em: CONFIG.ABRE_EM, carta: jaAbriu() ? carta : null };
+    }
+    const r = await fetch(`${CONFIG.API_URL}/consultar`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email })
+    });
+    if (!r.ok) throw new Error("consulta");
+    return r.json();
+  },
+  async guardar(carta) {
+    if (DEMO) {
+      const tudo = lerTudo();
+      if (tudo[carta.email]) return { duplicado: true };
+      tudo[carta.email] = carta;
+      gravarTudo(tudo);
+      return { ok: true };
+    }
+    const r = await fetch(`${CONFIG.API_URL}/mensagens`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(carta)
+    });
+    if (r.status === 409) return { duplicado: true };
+    if (!r.ok) throw new Error("guardar");
+    return { ok: true };
+  },
+  async porToken(token) {
+    const r = await fetch(`${CONFIG.API_URL}/carta?token=${encodeURIComponent(token)}`);
+    if (!r.ok) throw new Error("token");
+    return r.json();
+  }
+};
+
+/* ---------- interface ---------- */
+const passos = ["#passoIdentificar", "#carta", "#passoFeito", "#passoLer"];
+function mostrar(id) {
+  passos.forEach((p) => { $(p).hidden = p !== id; });
+  $(id).scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+const estado = { nome: "", email: "" };
+
+function diasAte(data) { return Math.max(0, Math.ceil((data - new Date()) / 86400000)); }
+function textoContagem() {
+  const dias = diasAte(abreEm);
+  if (dias === 0) return "A cápsula já pode ser aberta.";
+  const anos = Math.floor(dias / 365);
+  return anos >= 1
+    ? `Faltam cerca de ${anos} ${anos === 1 ? "ano" : "anos"} (${dias.toLocaleString("pt-BR")} dias).`
+    : `Faltam ${dias.toLocaleString("pt-BR")} ${dias === 1 ? "dia" : "dias"}.`;
+}
+
+function mostrarFeito(jaTinha) {
+  $("#textoFeito").textContent = (jaTinha
+    ? `Este email já guardou uma carta, e cada email só pode ter uma. `
+    : `Sua carta está dentro da cápsula. `)
+    + `Ela será aberta em ${fmtData(abreEm)}. Nesse dia enviaremos um email para ${estado.email} com o link para você ler o que escreveu.`;
+  $("#contagem").textContent = textoContagem();
+  mostrar("#passoFeito");
+}
+
+function mostrarLeitura(carta) {
+  $("#leDe").textContent = `De: ${carta.nome}`;
+  $("#leData").textContent = `Escrita em ${fmtData(carta.criada_em)}`;
+  $("#leTexto").textContent = carta.mensagem;
+  const dias = Math.max(0, Math.round((new Date() - new Date(carta.criada_em)) / 86400000));
+  $("#leTempo").textContent = `Esta carta esperou ${dias.toLocaleString("pt-BR")} ${dias === 1 ? "dia" : "dias"} dentro da cápsula. O que mudou desde então?`;
+  mostrar("#passoLer");
+}
+
+/* ---------- passo 1: identificar ---------- */
+$("#formIdentificar").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const nome = $("#nome").value.trim();
+  const email = normalizar($("#email").value);
+  const erro = $("#erroIdent");
+  erro.textContent = "";
+
+  if (!nome) { erro.textContent = "Digite seu nome."; $("#nome").focus(); return; }
+  if (!emailValido(email)) { erro.textContent = "Digite um email válido, como nome@exemplo.com."; $("#email").focus(); return; }
+
+  const btn = $("#btnIdentificar");
+  btn.disabled = true;
+  try {
+    estado.nome = nome; estado.email = email;
+    const res = await api.consultar(email);
+    if (res.existe) {
+      if (res.aberta && res.carta) { mostrarLeitura(res.carta); }
+      else if (res.aberta) {
+        $("#textoFeito").textContent = "Este email tem uma carta, e a cápsula já foi aberta. Use o link que enviamos por email para lê-la.";
+        $("#contagem").textContent = "";
+        mostrar("#passoFeito");
+      } else { mostrarFeito(true); }
+      return;
+    }
+    $("#deQuem").textContent = `De: ${nome}`;
+    $("#dataCarta").textContent = fmtData(new Date());
+    mostrar("#carta");
+    $("#mensagem").focus({ preventScroll: true });
+  } catch {
+    erro.textContent = "Não foi possível verificar seu email agora. Tente de novo em instantes.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------- passo 2: escrever e guardar ---------- */
+$("#mensagem").addEventListener("input", (e) => {
+  $("#contador").textContent = `${e.target.value.length} / ${CONFIG.MAX_CARACTERES}`;
+});
+
+$("#btnGuardar").addEventListener("click", async () => {
+  const mensagem = $("#mensagem").value.trim();
+  const erro = $("#erroCarta");
+  erro.textContent = "";
+  if (mensagem.length < 10) { erro.textContent = "Escreva pelo menos algumas palavras antes de lacrar a cápsula."; $("#mensagem").focus(); return; }
+
+  const btn = $("#btnGuardar");
+  btn.disabled = true;
+  try {
+    const res = await api.guardar({ nome: estado.nome, email: estado.email, mensagem, criada_em: new Date().toISOString() });
+    if (res.duplicado) { mostrarFeito(true); $("#carta").hidden = true; return; }
+    await animarEnvio();
+    mostrarFeito(false);
+  } catch {
+    erro.textContent = "Não foi possível guardar sua carta. Ela continua aqui; tente de novo.";
+    btn.disabled = false;
+  }
+});
+
+/* ---------- animação: a carta dobra e entra na cápsula ---------- */
+async function animarEnvio() {
+  const carta = $("#carta");
+  const fenda = $("#fenda");
+
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    carta.hidden = true;
+    fenda.classList.add("lacrada");
+    return;
+  }
+
+  fenda.classList.add("aberta");           // tampa abre
+  carta.classList.add("dobrando");         // texto some, vincos aparecem
+  await esperar(550);
+
+  const rc = carta.getBoundingClientRect();
+  const rf = fenda.getBoundingClientRect();
+  const sx = Math.min(0.9, (rf.width * 0.5) / rc.width);                       // largura final cabe na boca da cápsula
+  const sy = 0.3;
+  const dy = (rf.top + rf.height * 0.45) - (rc.top + rc.height / 2);           // até o fundo da boca
+
+  const anim = carta.animate([
+    { transform: "translate(0,0) scale(1,1)", offset: 0, easing: "ease-in-out" },
+    { transform: "translate(0,0) scale(1,.5)", offset: .2, easing: "ease-in-out" },       // dobra ao meio
+    { transform: `translate(0,0) scale(${sx},.5)`, offset: .4, easing: "ease-in-out" },   // dobra em três
+    { transform: `translate(0,0) scale(${sx},${sy})`, offset: .5, easing: "ease-in" },     // pequena
+    { transform: `translate(0,${dy}px) scale(${sx},${sy})`, offset: 1 }                    // cai para dentro
+  ], { duration: 2600, fill: "forwards" });
+  await anim.finished;
+
+  carta.style.visibility = "hidden";
+  await esperar(150);
+  fenda.classList.remove("aberta");        // tampa fecha
+  await esperar(800);
+  fenda.classList.add("lacrada");          // selo
+  await esperar(900);
+  carta.hidden = true;
+}
+
+/* ---------- inicialização ---------- */
+(function iniciar() {
+  const dataTxt = fmtData(abreEm);
+  $("#placaAno").textContent = abreEm.getFullYear();
+  $("#chamada").textContent = `Escreva uma carta hoje. A cápsula será aberta em ${dataTxt}, e a sua volta para você.`;
+  $("#dataCarta").textContent = fmtData(new Date());
+  if (DEMO) $("#avisoDemo").hidden = false;
+
+  // Link recebido por email: ?token=...
+  const token = params.get("token");
+  if (token && !DEMO) {
+    api.porToken(token)
+      .then(mostrarLeitura)
+      .catch(() => {
+        $("#textoFeito").textContent = "Não foi possível abrir esta carta. O link pode estar incorreto, ou a cápsula ainda não foi aberta.";
+        $("#contagem").textContent = textoContagem();
+        $("#tFeito").textContent = "Carta indisponível";
+        mostrar("#passoFeito");
+      });
+  }
+})();
+</script>
+</body>
+</html>
